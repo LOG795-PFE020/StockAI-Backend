@@ -1,0 +1,3 @@
+dotnet ef migrations add InitialCreate -p Infrastructure.Repositories/Infrastructure.Repositories.csproj -s Configuration/Configuration.csproj --context UserPrincipalContext
+
+dotnet ef migrations add InitialClientCreate -p Infrastructure.Repositories/Infrastructure.Repositories.csproj -s Configuration/Configuration.csproj --context ClientDbContext
