@@ -32,17 +32,15 @@ public sealed class Startup
 
     public void ConfigureServices(IServiceCollection services)
     {
-        var symmetricKeyProvider = new SymmetricKeyProvider();
-
         services.Configure<PasswordSettings>(_configuration.GetSection(nameof(PasswordSettings)));
         services.Configure<DefaultAdmin>(_configuration.GetSection($"Users:{nameof(DefaultAdmin)}"));
         services.Configure<DefaultClient>(_configuration.GetSection($"Users:{nameof(DefaultClient)}"));
 
         services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<PasswordSettings>>().Value);
 
-        RegisterConfiguration(services, symmetricKeyProvider);
+        RegisterConfiguration(services);
         RegisterInfrastructure(services);
-        RegisterPresentation(services, symmetricKeyProvider);
+        RegisterPresentation(services);
         RegisterApplication(services);
 
         services.AddEndpointsApiExplorer();
@@ -77,7 +75,7 @@ public sealed class Startup
         ScrutorScanForType(collection, typeof(ICommandHandler<>), assemblyNames: "Application.Commands");
     }
 
-    private void RegisterPresentation(IServiceCollection collection, SymmetricKeyProvider symmetricKeyProvider)
+    private void RegisterPresentation(IServiceCollection collection)
     {
         collection.AddHostedService<AddDefaultDbRecords>();
 
@@ -127,12 +125,14 @@ public sealed class Startup
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = symmetricKeyProvider.SigningKey,
-                ValidateIssuer = false,
-                ValidateAudience = false,
+                IssuerSigningKey = RsaKeyStorage.Instance.RsaSecurityKey,
+                ValidateIssuer = true,
+                ValidateAudience = true,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero,
-                RoleClaimType = ClaimTypes.Role
+                RoleClaimType = ClaimTypes.Role,
+                ValidIssuer = "auth",
+                ValidAudience = "pfe"
             };
         });
     }
@@ -154,10 +154,9 @@ public sealed class Startup
         }
     }
 
-    private void RegisterConfiguration(IServiceCollection collection, SymmetricKeyProvider symmetricKeyProvider)
+    private void RegisterConfiguration(IServiceCollection collection)
     {
-        collection.AddSingleton<ISymmetricKeyProvider, SymmetricKeyProvider>(_ => symmetricKeyProvider);
-        collection.AddSingleton<IRsaKeyStorage, RsaKeyStorage>();
+        collection.AddSingleton<IRsaKeyStorage, RsaKeyStorage>(_ => RsaKeyStorage.Instance);
         collection.AddSingleton<IQueryDispatcher, QueryDispatcher>();
         collection.AddSingleton<ICommandDispatcher, CommandDispatcher>();
     }

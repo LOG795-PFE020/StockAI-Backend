@@ -1,21 +1,24 @@
+using System.Security.Cryptography.X509Certificates;
+
 namespace Configuration;
 
 public class Program
 {
-    public static IHostBuilder CreateHostBuilder(string[] args) =>
+    private static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
             .ConfigureWebHostDefaults(webBuilder =>
             {
-                webBuilder.UseStartup<Startup>();
+                webBuilder.UseStartup<Startup>()
+                    .ConfigureKestrel(serverOptions =>
+                    {
+                        serverOptions.ListenAnyIP(8081,
+                            listenOptions =>
+                            {
+                                listenOptions.UseHttps("./certs/localhost.pfx", "secret");
+                                listenOptions.UseConnectionLogging();
+                            });
+                    });
 
-                //webBuilder.ConfigureKestrel(serverOptions =>
-                //{
-                //    serverOptions.ListenLocalhost(8080);
-                //    serverOptions.ListenLocalhost(8081, listenOptions =>
-                //    {
-                //        listenOptions.UseHttps("certs/localhost.pfx", "");
-                //    });
-                //});
             });
 
     public static void Main(string[] args)

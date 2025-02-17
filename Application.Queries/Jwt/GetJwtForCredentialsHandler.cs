@@ -11,12 +11,12 @@ namespace Application.Queries.Jwt;
 
 public sealed class GetJwtForCredentialsHandler : IQueryHandler<GetJwtForCredentials, string>
 {
-    private readonly ISymmetricKeyProvider _symmetricKeyProvider;
+    private readonly IRsaKeyStorage _rsaKeyStorage;
     private readonly UserManager<UserPrincipal> _principalManager;
 
-    public GetJwtForCredentialsHandler(ISymmetricKeyProvider symmetricKeyProvider, UserManager<UserPrincipal> principalManager)
+    public GetJwtForCredentialsHandler(IRsaKeyStorage rsaKeyStorage, UserManager<UserPrincipal> principalManager)
     {
-        _symmetricKeyProvider = symmetricKeyProvider;
+        _rsaKeyStorage = rsaKeyStorage;
         _principalManager = principalManager;
     }
 
@@ -44,15 +44,14 @@ public sealed class GetJwtForCredentialsHandler : IQueryHandler<GetJwtForCredent
         {
             new(JwtRegisteredClaimNames.Sub, command.Username),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new(ClaimTypes.Role, role.Single())
+            new(ClaimTypes.Role, role.Single()),
         };
 
-        var creds = new SigningCredentials(_symmetricKeyProvider.SigningKey, SecurityAlgorithms.HmacSha256);
+        var creds = new SigningCredentials(_rsaKeyStorage.RsaSecurityKey, SecurityAlgorithms.RsaSha256);
 
         var token = new JwtSecurityToken(
-            //skipping these for the lab
-            issuer: null,
-            audience: null,
+            issuer: "auth",
+            audience: "pfe",
             claims: claims,
             expires: DateTime.Now.AddHours(1),
             signingCredentials: creds);

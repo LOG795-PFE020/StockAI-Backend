@@ -31,4 +31,10 @@ public sealed class UserController : ControllerBase
 
         return BadRequest(result.Exception!.Message);
     }
+
+    [HttpGet("validate")]
+    public ActionResult Validate()
+    {
+        return Ok();
+    }
 }

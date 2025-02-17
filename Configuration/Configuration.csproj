@@ -9,6 +9,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="certs\localhost.crt" />
+    <None Remove="certs\localhost.key" />
+    <None Remove="certs\localhost.pfx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="certs\localhost.pfx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.7" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.7" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="8.0.7" />
@@ -30,12 +42,6 @@
     <ProjectReference Include="..\Infrastructure.Repositories\Infrastructure.Repositories.csproj" />
     <ProjectReference Include="..\Presentation.Api\Presentation.Api.csproj" />
     <ProjectReference Include="..\Presentation.Jobs\Presentation.Jobs.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="certs\localhost.pfx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 </Project>

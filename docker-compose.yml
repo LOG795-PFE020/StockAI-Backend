@@ -2,7 +2,7 @@ services:
   configuration:
     image: ${DOCKER_REGISTRY-}configuration
     ports:
-      - "8080:8080"
+      - "8081:8081"
     build:
       context: .
       dockerfile: Configuration/Dockerfile
