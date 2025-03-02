@@ -9,7 +9,7 @@ using FluentAssertions;
 using Newtonsoft.Json;
 using Presentation.Jobs;
 
-namespace AuthServer.IntegrationTests.Tests;
+namespace AuthServer.IntegrationTests.Tests.Auth;
 
 [Collection(nameof(TestCollections.Default))]
 public class TestAuthentification
@@ -59,9 +59,9 @@ public class TestAuthentification
 
         // Check the response status code
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-            
+
         string jwt = await response.Content.ReadAsStringAsync();
 
-         _applicationFactoryFixture.GetRoleFromJwt(jwt).Should().Be(role);
+        _applicationFactoryFixture.GetRoleFromJwt(jwt).Should().Be(role);
     }
 }
