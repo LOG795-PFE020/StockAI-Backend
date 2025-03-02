@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 
-namespace AuthServer.IntegrationTests.Tests;
+namespace AuthServer.IntegrationTests.Tests.Auth;
 
 [Collection(nameof(TestCollections.Default))]
 public class UserControllerTests

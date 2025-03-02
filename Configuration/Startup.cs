@@ -8,6 +8,7 @@ using Application.Queries.Seedwork;
 using Configuration.Dispatchers;
 using Configuration.Encryption;
 using Domain.User;
+using Infrastructure.RabbitMQ.Registration;
 using Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;

@@ -7,7 +7,7 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace AuthServer.IntegrationTests.Tests;
+namespace AuthServer.IntegrationTests.Tests.Auth;
 
 [Collection(nameof(TestCollections.Default))]
 public sealed class ConfigurationControllerTests

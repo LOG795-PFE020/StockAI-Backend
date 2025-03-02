@@ -17,35 +17,51 @@ using Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Presentation.Jobs;
 using Application.Common.Configurations;
+using AuthServer.IntegrationTests.Tests.Rabbitmq.Consumers;
 using Microsoft.Extensions.Options;
+using Infrastructure.RabbitMQ.Registration;
+using AuthServer.IntegrationTests.Tests.Rabbitmq.Messages.Impl;
+using MassTransit;
 
 namespace AuthServer.IntegrationTests.Infrastructure;
 
 public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, IAsyncLifetime
 {
-    private readonly Postgres _dockerContainer = new();
+    private readonly Postgres _postgres = new();
+    private readonly Rabbitmq _rabbitmq = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
 
-        builder.ConfigureKestrel(serverOptions =>
-        {
-            serverOptions.ListenLocalhost(8082, listenOptions =>
-            {
-                listenOptions.UseHttps("certs/localhost.pfx", "");
-            });
-        });
-
-        builder.ConfigureAppConfiguration((context, config) =>
+        builder.ConfigureAppConfiguration((_, config) =>
         {
             var integrationConfig = new Dictionary<string, string>
             {
-                ["ConnectionStrings:Postgres"] = _dockerContainer.Container.GetConnectionString(),
+                ["ConnectionStrings:Postgres"] = _postgres.Container.GetConnectionString(),
+                ["ConnectionStrings:Rabbitmq"] = _rabbitmq.Container.GetConnectionString(),
             };
-
+            
             config.AddInMemoryCollection(integrationConfig!);
         });
+
+        builder.ConfigureServices(services =>
+        {
+            services.RegisterMassTransit(
+                _rabbitmq.Container.GetConnectionString(),
+        new MassTransitConfigurator()
+                .AddPublisher<TestMessage>()
+                .AddConsumer<TestMessage, TestMessageConsumer>("test-exchange"));
+        });
+    }
+
+    public async Task<ISendEndpoint> WithTestExchangeEndpoint()
+    {
+        using var scope = Services.CreateScope();
+
+        var publishEndpoint = scope.ServiceProvider.GetRequiredService<ISendEndpointProvider>();
+        
+        return await publishEndpoint.GetSendEndpoint(new Uri($"{_rabbitmq.Container.GetConnectionString()}/test-exchange"));
     }
 
     public async Task<HttpClient> WithAdminAuthAsync()
@@ -137,14 +153,16 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
 
     public async Task InitializeAsync()
     {
-        await _dockerContainer.InitializeAsync();
+        await _postgres.InitializeAsync();
+        await _rabbitmq.InitializeAsync();
     }
 
     public new async Task DisposeAsync()
     {
         await base.DisposeAsync();
 
-        await _dockerContainer.DisposeAsync();
+        await _postgres.DisposeAsync();
+        await _rabbitmq.DisposeAsync();
     }
 
     public string? GetRoleFromJwt(string jwt)
