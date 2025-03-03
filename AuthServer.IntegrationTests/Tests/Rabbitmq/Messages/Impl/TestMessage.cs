@@ -1,8 +1,8 @@
-﻿namespace AuthServer.IntegrationTests.Tests.Rabbitmq.Messages.Impl;
+﻿using Domain.Common.Seedwork.Abstract;
 
-public sealed class TestMessage : ITestMessage
+namespace AuthServer.IntegrationTests.Tests.Rabbitmq.Messages.Impl;
+
+public sealed class TestMessage : Event
 {
-    public Guid CorrelationId { get; set; }
-
     public string Message { get; set; }
 }

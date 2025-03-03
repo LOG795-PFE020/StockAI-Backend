@@ -24,17 +24,17 @@ public class ConnectionTests
 
         Guid correlationId = Guid.NewGuid();
 
-        var sendEndpoint = await _applicationFactoryFixture.WithTestExchangeEndpoint();
+        var sendEndpoint = _applicationFactoryFixture.WithMessagePublisher();
 
-        await sendEndpoint.Send(new TestMessage()
+        await sendEndpoint.Publish(new TestMessage()
         {
-            CorrelationId = correlationId,
+            CorrelationId = correlationId.ToString(),
             Message = message
         });
 
-         var responseMessage = await MessageSink.ListenFor<TestMessage>(correlationId, new CancellationTokenSource(timeout).Token);
+         var responseMessage = await MessageSink.ListenFor<TestMessage>(correlationId.ToString(), new CancellationTokenSource(timeout).Token);
 
         responseMessage.Should().NotBeNull();
-        responseMessage.Message.Should().Be(message);
+        responseMessage.Single().Message.Should().Be(message);
     }
 }

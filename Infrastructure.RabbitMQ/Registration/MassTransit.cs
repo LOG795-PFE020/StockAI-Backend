@@ -5,6 +5,8 @@ namespace Infrastructure.RabbitMQ.Registration
 {
     public static class MassTransit
     {
+        public static IReadOnlyDictionary<Type, string> ExchangeNamesForMessageTypes { get; private set; } = new Dictionary<Type, string>();
+
         public static void RegisterMassTransit(this IServiceCollection services, string connectionString, MassTransitConfigurator massTransitConfigurator)
         {
             services.AddMassTransit(busRegistrationConfigurator =>
@@ -19,6 +21,8 @@ namespace Infrastructure.RabbitMQ.Registration
                     }
                 });
             });
+
+            ExchangeNamesForMessageTypes = massTransitConfigurator.ExchangeNamesForMessageTypes;
         }
     }
 }

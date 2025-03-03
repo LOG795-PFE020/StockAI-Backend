@@ -1,9 +1,15 @@
-﻿namespace Domain.Common.Seedwork.Abstract;
+﻿using System.Collections;
+
+namespace Domain.Common.Seedwork.Abstract;
 
 public abstract class Aggregate<T> : Entity<T> where T : class
 {
-    protected Aggregate(string id) : base(id)
+    public DequeueEnumerable<Event> DomainEvents { get; } = new();
+
+    protected void AddDomainEvent(Event domainEvent)
     {
-        
+        DomainEvents.Enqueue(domainEvent);
     }
+
+    protected Aggregate(string id) : base(id) {}
 }

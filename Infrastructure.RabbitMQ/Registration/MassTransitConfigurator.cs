@@ -1,6 +1,5 @@
 ﻿using MassTransit;
 using RabbitMQ.Client;
-using System;
 
 namespace Infrastructure.RabbitMQ.Registration;
 
@@ -8,9 +7,13 @@ public sealed class MassTransitConfigurator
 {
     public IEnumerable<Action<IBusRegistrationConfigurator, IBusRegistrationContext, IRabbitMqBusFactoryConfigurator>> ConfigureMessages => _configureMessages;
 
+    public IReadOnlyDictionary<Type, string> ExchangeNamesForMessageTypes => _exchangeNamesForMessageTypes;
+
     private readonly HashSet<Type> _messageTypes = [];
 
     private readonly List<Action<IBusRegistrationConfigurator, IBusRegistrationContext, IRabbitMqBusFactoryConfigurator>> _configureMessages = [];
+
+    private readonly Dictionary<Type, string> _exchangeNamesForMessageTypes = new();
 
     public MassTransitConfigurator AddConsumer<TMessage, TConsumer>(string exchangeName) 
         where TMessage : class
@@ -36,7 +39,7 @@ public sealed class MassTransitConfigurator
         return this;
     }
 
-    public MassTransitConfigurator AddPublisher<TMessage>() 
+    public MassTransitConfigurator AddPublisher<TMessage>(string exchangeName) 
         where TMessage : class
     {
         _configureMessages.Add((_, _, configurator) =>
@@ -49,6 +52,8 @@ public sealed class MassTransitConfigurator
                 cfg.ExchangeType = ExchangeType.Fanout;
             });
         });
+
+        _exchangeNamesForMessageTypes.Add(typeof(TMessage), exchangeName);
 
         return this;
     }

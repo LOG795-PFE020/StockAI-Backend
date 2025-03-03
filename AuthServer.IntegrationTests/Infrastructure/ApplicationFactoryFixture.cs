@@ -12,6 +12,7 @@ using Domain.User;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Application.Commands.AdminPassword;
+using Application.Commands.Interfaces;
 using Application.Commands.Seedwork;
 using Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,7 +22,8 @@ using AuthServer.IntegrationTests.Tests.Rabbitmq.Consumers;
 using Microsoft.Extensions.Options;
 using Infrastructure.RabbitMQ.Registration;
 using AuthServer.IntegrationTests.Tests.Rabbitmq.Messages.Impl;
-using MassTransit;
+using Domain.Time.DomainEvents;
+using AuthServer.IntegrationTests.Tests.Time.Consumers;
 
 namespace AuthServer.IntegrationTests.Infrastructure;
 
@@ -50,21 +52,21 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
             services.RegisterMassTransit(
                 _rabbitmq.Container.GetConnectionString(),
         new MassTransitConfigurator()
-                .AddPublisher<TestMessage>()
-                .AddConsumer<TestMessage, TestMessageConsumer>("test-exchange"));
+                .AddPublisher<TestMessage>("test-exchange")
+                .AddConsumer<TestMessage, TestMessageConsumer>("test-exchange")
+                .AddPublisher<DayStarted>("day-started-exchange")
+                .AddConsumer<DayStarted, TestTimeMessageConsumer>("day-started-exchange"));
         });
     }
 
-    public async Task<ISendEndpoint> WithTestExchangeEndpoint()
+    public IMessagePublisher WithMessagePublisher()
     {
         using var scope = Services.CreateScope();
 
-        var publishEndpoint = scope.ServiceProvider.GetRequiredService<ISendEndpointProvider>();
-        
-        return await publishEndpoint.GetSendEndpoint(new Uri($"{_rabbitmq.Container.GetConnectionString()}/test-exchange"));
+        return scope.ServiceProvider.GetRequiredService<IMessagePublisher>();
     }
 
-    public async Task<HttpClient> WithAdminAuthAsync()
+    public async Task<HttpClient> WithAdminAuthAsync(Guid testId = default)
     {
         using var scope = Services.CreateScope();
 
@@ -72,7 +74,7 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
 
         var commandDispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
 
-        await AddDefaultDbRecords.IsReady.Task;
+        await ServiceReady.Instance.IsReady.Task;
 
         await commandDispatcher.DispatchAsync(new ResetUserPassword(defaultAdmin.Value.Username, defaultAdmin.Value.Password));
 
@@ -89,11 +91,12 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
         var adminClient = CreateDefaultClient();
 
         adminClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {jwt}");
+        adminClient.DefaultRequestHeaders.Add("CorrelationId", testId.ToString());
 
         return adminClient;
     }
 
-    public async Task<HttpClient> WithClientUserAuthAsync()
+    public async Task<HttpClient> WithClientUserAuthAsync(Guid testId = default)
     {
         using var scope = Services.CreateScope();
 
@@ -101,7 +104,7 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
 
         var commandDispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
 
-        await AddDefaultDbRecords.IsReady.Task;
+        await ServiceReady.Instance.IsReady.Task;
 
         await commandDispatcher.DispatchAsync(new ResetUserPassword(userDefault.Value.Username, userDefault.Value.Password));
 
@@ -118,6 +121,7 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
         var adminClient = CreateDefaultClient();
 
         adminClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {jwt}");
+        adminClient.DefaultRequestHeaders.Add("CorrelationId", testId.ToString());
 
         return adminClient;
     }
