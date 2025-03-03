@@ -3,17 +3,21 @@ using System.Security.Claims;
 using Application.Commands.Interfaces;
 using Application.Commands.Seedwork;
 using Application.Common.Configurations;
+using Application.Common.Interfaces;
 using Application.Queries.Interfaces;
 using Application.Queries.Seedwork;
 using Configuration.Dispatchers;
 using Configuration.Encryption;
 using Domain.User;
 using Infrastructure.RabbitMQ.Registration;
+using Infrastructure.RabbitMQ.Services;
 using Infrastructure.Repositories;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Presentation.Api.Controllers;
@@ -63,6 +67,7 @@ public sealed class Startup
         app.UseAuthorization();
 
         app.UseMiddleware<ApiLoggingMiddleware>();
+        app.UseMiddleware<TransactionMiddleware>();
 
         app.UseEndpoints(endpoints =>
         {
@@ -79,6 +84,7 @@ public sealed class Startup
     private void RegisterPresentation(IServiceCollection collection)
     {
         collection.AddHostedService<AddDefaultDbRecords>();
+        collection.AddHostedService<TickJob>();
 
         collection.AddControllers()
             .AddJsonOptions(options =>
@@ -141,8 +147,16 @@ public sealed class Startup
     private void RegisterInfrastructure(IServiceCollection collection)
     {
         collection.AddScoped<IMigrateUserContext, UserPrincipalContext>(provider => provider.GetRequiredService<UserPrincipalContext>());
+        collection.AddScoped<ITransactionInfo, TransactionInfo>();
+        collection.AddScoped<IMessagePublisher, MessagePublisher>(provider =>
+            new MessagePublisher(
+                _configuration.GetConnectionString("Rabbitmq") ?? throw new InvalidOperationException("Rabbitmq connection string is not found"), 
+                provider.GetRequiredService<ISendEndpointProvider>(),
+                provider.GetRequiredService<ITransactionInfo>()));
 
         collection.AddDbContext<UserPrincipalContext>(RepositoryDbContextOptionConfiguration);
+
+        collection.AddSingleton(typeof(IInMemoryStore<>), typeof(InMemoryStore<>));
 
         return;
 
@@ -158,8 +172,8 @@ public sealed class Startup
     private void RegisterConfiguration(IServiceCollection collection)
     {
         collection.AddSingleton<IRsaKeyStorage, RsaKeyStorage>(_ => RsaKeyStorage.Instance);
-        collection.AddSingleton<IQueryDispatcher, QueryDispatcher>();
-        collection.AddSingleton<ICommandDispatcher, CommandDispatcher>();
+        collection.AddScoped<IQueryDispatcher, QueryDispatcher>();
+        collection.AddScoped<ICommandDispatcher, CommandDispatcher>();
     }
 
     private void ScrutorScanForType(IServiceCollection services, Type type,

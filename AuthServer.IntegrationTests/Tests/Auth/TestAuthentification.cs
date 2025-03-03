@@ -27,7 +27,7 @@ public class TestAuthentification
     {
         var unauthorizedClient = _applicationFactoryFixture.CreateDefaultClient();
 
-        await AddDefaultDbRecords.IsReady.Task;
+        await ServiceReady.Instance.IsReady.Task;
 
         // Fetch public key from the server
         var publicKeyResponse = await unauthorizedClient.GetFromJsonAsync<ServerPublicKey>("auth/publickey");

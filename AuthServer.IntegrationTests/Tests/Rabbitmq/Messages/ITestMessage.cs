@@ -2,5 +2,5 @@
 
 public interface ITestMessage
 {
-    Guid CorrelationId { get; set; }
+    string CorrelationId { get; set; }
 }

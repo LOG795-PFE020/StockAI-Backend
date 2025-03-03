@@ -9,9 +9,7 @@ public class CommandDispatcher(IServiceProvider serviceProvider, ILogger<Command
     {
         try
         {
-            var scope = serviceProvider.CreateScope();
-
-            var handler = scope.ServiceProvider.GetRequiredService<ICommandHandler<TCommand>>();
+            var handler = serviceProvider.GetRequiredService<ICommandHandler<TCommand>>();
 
             if (command.GetType().Name is { } commandName && string.IsNullOrWhiteSpace(commandName) is false)
             {

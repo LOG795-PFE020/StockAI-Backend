@@ -23,6 +23,16 @@ public class UserControllerTests
     }
 
     [Fact]
+    public async Task ValidAuth_Validate_ShouldReturnOK()
+    {
+        var client = await _applicationFactoryFixture.WithClientUserAuthAsync();
+
+        var response = await client.GetAsync("user/validate");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task ValidAuth_ChangePassword_ShouldReturnOK()
     {
         var defaultAdmin = _applicationFactoryFixture.Services.GetRequiredService<IOptions<DefaultAdmin>>();
