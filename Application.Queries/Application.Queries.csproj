@@ -9,17 +9,21 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.7" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.0.1" />
+    <PackageReference Include="MongoDB.Driver" Version="3.2.1" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Application.Common\Application.Common.csproj" />
     <ProjectReference Include="..\Domain.Common\Domain.Common.csproj" />
+    <ProjectReference Include="..\Domain.Stock\Domain.Stock.csproj" />
     <ProjectReference Include="..\Domain.User\Domain.User.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Encryption\" />
+    <Folder Include="Quotes\" />
+    <Folder Include="Stocks\" />
   </ItemGroup>
 
 </Project>
