@@ -1,5 +1,8 @@
 ﻿using MassTransit;
+using MassTransit.RabbitMqTransport.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using RabbitMQ.Client;
+using System.Net;
 
 namespace Infrastructure.RabbitMQ.Registration;
 
@@ -15,11 +18,15 @@ public sealed class MassTransitConfigurator
 
     private readonly Dictionary<Type, string> _exchangeNamesForMessageTypes = new();
 
-    public MassTransitConfigurator AddConsumer<TMessage, TConsumer>(string exchangeName) 
+    public MassTransitConfigurator AddConsumer<TMessage, TConsumer>(string exchangeName)
         where TMessage : class
-        where TConsumer : class, IConsumer<TMessage>, new()
+        where TConsumer : class, IConsumer<TMessage>, new() => AddConsumer<TMessage, TConsumer>(exchangeName, _ => new TConsumer());
+
+    public MassTransitConfigurator AddConsumer<TMessage, TConsumer>(string exchangeName, Func<IServiceProvider, TConsumer> consumerFactory) 
+        where TMessage : class
+        where TConsumer : class, IConsumer<TMessage>
     {
-        _configureMessages.Add((x, y, configurator) =>
+        _configureMessages.Add((_, ctx, configurator) =>
         {
             RegisterMessageType<TMessage>(configurator);
 
@@ -32,7 +39,7 @@ public sealed class MassTransitConfigurator
                     binding.ExchangeType = ExchangeType.Fanout;
                 });
 
-                endpoint.Consumer<TConsumer>();
+                endpoint.Consumer(() => consumerFactory(ctx));
             });
         });
 
@@ -66,6 +73,8 @@ public sealed class MassTransitConfigurator
         {
             return;
         }
+
+        configurator.UseRawJsonDeserializer(RawSerializerOptions.All, isDefault: true);
 
         configurator.Message<TMessage>(topologyConfigurator =>
         {              

@@ -1,4 +1,5 @@
 ﻿using MassTransit;
+using MassTransit.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure.RabbitMQ.Registration

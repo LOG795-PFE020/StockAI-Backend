@@ -17,11 +17,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using MongoDB.Driver;
 using Presentation.Api.Controllers;
 using Presentation.Api.Middlewares;
+using Presentation.Consumers;
+using Presentation.Consumers.Messages;
 using Presentation.Jobs;
 
 namespace Configuration;
@@ -156,7 +158,22 @@ public sealed class Startup
 
         collection.AddDbContext<UserPrincipalContext>(RepositoryDbContextOptionConfiguration);
 
+        collection.AddSingleton<IMongoClient>(_ => new MongoClient(_configuration.GetConnectionString("Mongodb")));
+        collection.AddSingleton(sp =>
+        {
+            var client = sp.GetRequiredService<IMongoClient>();
+            return client.GetDatabase("Stocks");
+        });
+
+        collection.AddScoped<ISharesRepository, MongoSharesRepository>();
+
         collection.AddSingleton(typeof(IInMemoryStore<>), typeof(InMemoryStore<>));
+
+        collection.RegisterMassTransit(
+            _configuration.GetConnectionString("Rabbitmq") ??
+            throw new InvalidOperationException("Rabbitmq connection string is not found"),
+            new MassTransitConfigurator()
+                .AddConsumer<StockQuote, QuoteConsumer>("quote-exchange", sp => new QuoteConsumer(sp.GetRequiredService<ICommandDispatcher>())));
 
         return;
 

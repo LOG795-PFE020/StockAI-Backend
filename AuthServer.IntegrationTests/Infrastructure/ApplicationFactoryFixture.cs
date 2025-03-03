@@ -24,6 +24,9 @@ using Infrastructure.RabbitMQ.Registration;
 using AuthServer.IntegrationTests.Tests.Rabbitmq.Messages.Impl;
 using Domain.Time.DomainEvents;
 using AuthServer.IntegrationTests.Tests.Time.Consumers;
+using Presentation.Consumers;
+using Presentation.Consumers.Messages;
+using Microsoft.AspNetCore.TestHost;
 
 namespace AuthServer.IntegrationTests.Infrastructure;
 
@@ -31,6 +34,7 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
 {
     private readonly Postgres _postgres = new();
     private readonly Rabbitmq _rabbitmq = new();
+    private readonly Mongodb _mongodb = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -42,20 +46,37 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
             {
                 ["ConnectionStrings:Postgres"] = _postgres.Container.GetConnectionString(),
                 ["ConnectionStrings:Rabbitmq"] = _rabbitmq.Container.GetConnectionString(),
+                ["ConnectionStrings:Mongodb"] = _mongodb.Container.GetConnectionString(),
             };
             
             config.AddInMemoryCollection(integrationConfig!);
         });
 
-        builder.ConfigureServices(services =>
+        builder.ConfigureTestServices(services =>
         {
+            // Remove any existing MassTransit registrations to prevent duplicate configuration.
+            var massTransitDescriptors = services
+                .Where(s => s.ServiceType?.Namespace?.Contains("MassTransit") == true)
+                .ToList();
+
+            foreach (var descriptor in massTransitDescriptors)
+            {
+                services.Remove(descriptor);
+            }
+
             services.RegisterMassTransit(
                 _rabbitmq.Container.GetConnectionString(),
-        new MassTransitConfigurator()
-                .AddPublisher<TestMessage>("test-exchange")
-                .AddConsumer<TestMessage, TestMessageConsumer>("test-exchange")
-                .AddPublisher<DayStarted>("day-started-exchange")
-                .AddConsumer<DayStarted, TestTimeMessageConsumer>("day-started-exchange"));
+                new MassTransitConfigurator()
+                    .AddPublisher<TestMessage>("test-exchange")
+                    .AddConsumer<TestMessage, TestMessageConsumer>("test-exchange")
+                    .AddPublisher<DayStarted>("day-started-exchange")
+                    .AddConsumer<DayStarted, TestTimeMessageConsumer>("day-started-exchange")
+                    .AddPublisher<StockQuote>("quote-exchange")
+                    .AddConsumer<StockQuote, QuoteConsumer>("quote-exchange", sp =>
+                    {
+                        var scope = sp.CreateScope();
+                        return new QuoteConsumer(scope.ServiceProvider.GetRequiredService<ICommandDispatcher>());
+                    }));
         });
     }
 
@@ -159,6 +180,7 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
     {
         await _postgres.InitializeAsync();
         await _rabbitmq.InitializeAsync();
+        await _mongodb.InitializeAsync();
     }
 
     public new async Task DisposeAsync()
@@ -167,6 +189,7 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
 
         await _postgres.DisposeAsync();
         await _rabbitmq.DisposeAsync();
+        await _mongodb.DisposeAsync();
     }
 
     public string? GetRoleFromJwt(string jwt)

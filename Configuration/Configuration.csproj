@@ -42,6 +42,7 @@
     <ProjectReference Include="..\Infrastructure.RabbitMQ\Infrastructure.RabbitMQ.csproj" />
     <ProjectReference Include="..\Infrastructure.Repositories\Infrastructure.Repositories.csproj" />
     <ProjectReference Include="..\Presentation.Api\Presentation.Api.csproj" />
+    <ProjectReference Include="..\Presentation.Consumers\Presentation.Consumers.csproj" />
     <ProjectReference Include="..\Presentation.Jobs\Presentation.Jobs.csproj" />
   </ItemGroup>
 
