@@ -18,23 +18,14 @@ public class ConnectionTests
     [Fact]
     public async Task WithTestExchangeEndpoint_SendMessage_ShouldReturnCorrectMessage()
     {
-        const int timeout = 10_000;
-
         const string message = "Hello, World!";
 
-        Guid correlationId = Guid.NewGuid();
-
-        var sendEndpoint = _applicationFactoryFixture.WithMessagePublisher();
-
-        await sendEndpoint.Publish(new TestMessage()
+        var responseMessage = await _applicationFactoryFixture.WithMessagePublished(new TestMessage()
         {
-            CorrelationId = correlationId.ToString(),
             Message = message
         });
 
-         var responseMessage = await MessageSink.ListenFor<TestMessage>(correlationId.ToString(), new CancellationTokenSource(timeout).Token);
-
         responseMessage.Should().NotBeNull();
-        responseMessage.Single().Message.Should().Be(message);
+        responseMessage.Message.Should().Be(message);
     }
 }

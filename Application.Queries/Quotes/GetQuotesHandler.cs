@@ -10,8 +10,9 @@ public sealed class GetQuotesHandler : IQueryHandler<GetQuotes, List<Quote>>
 {
     private readonly IMongoCollection<Share> _shares;
 
-    public GetQuotesHandler(IMongoDatabase database)
+    public GetQuotesHandler(IMongoClient client)
     {
+        var database = client.GetDatabase("Stocks");
         _shares = database.GetCollection<Share>("Share");
     }
 

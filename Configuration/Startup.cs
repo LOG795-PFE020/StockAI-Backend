@@ -6,8 +6,10 @@ using Application.Common.Configurations;
 using Application.Common.Interfaces;
 using Application.Queries.Interfaces;
 using Application.Queries.Seedwork;
+using Azure.Storage.Blobs;
 using Configuration.Dispatchers;
 using Configuration.Encryption;
+using Domain.Time.DomainEvents;
 using Domain.User;
 using Infrastructure.RabbitMQ.Registration;
 using Infrastructure.RabbitMQ.Services;
@@ -159,21 +161,30 @@ public sealed class Startup
         collection.AddDbContext<UserPrincipalContext>(RepositoryDbContextOptionConfiguration);
 
         collection.AddSingleton<IMongoClient>(_ => new MongoClient(_configuration.GetConnectionString("Mongodb")));
-        collection.AddSingleton(sp =>
-        {
-            var client = sp.GetRequiredService<IMongoClient>();
-            return client.GetDatabase("Stocks");
-        });
 
         collection.AddScoped<ISharesRepository, MongoSharesRepository>();
+        collection.AddScoped<IArticleRepository, MongoArticleRepository>();
+
+        collection.AddSingleton<IAzureBlobRepository, AzureBlobRepository>(_ 
+            => new AzureBlobRepository(new BlobContainerClient(_configuration.GetConnectionString("Blob") ?? throw new InvalidOperationException("Blob connection string is not found"),
+                "article-contents")));
 
         collection.AddSingleton(typeof(IInMemoryStore<>), typeof(InMemoryStore<>));
 
         collection.RegisterMassTransit(
-            _configuration.GetConnectionString("Rabbitmq") ??
-            throw new InvalidOperationException("Rabbitmq connection string is not found"),
+            _configuration.GetConnectionString("Rabbitmq") ?? throw new InvalidOperationException("Rabbitmq connection string is not found"),
             new MassTransitConfigurator()
-                .AddConsumer<StockQuote, QuoteConsumer>("quote-exchange", sp => new QuoteConsumer(sp.GetRequiredService<ICommandDispatcher>())));
+                .AddConsumer<StockQuote, QuoteConsumer>("quote-exchange",sp =>
+                {
+                    var scope = sp.CreateScope();
+                    return new(scope.ServiceProvider.GetRequiredService<ICommandDispatcher>());
+                })
+                .AddConsumer<News, NewsConsumer>("news-exchange", sp =>
+                {
+                    var scope = sp.CreateScope();
+                    return new(scope.ServiceProvider.GetRequiredService<ICommandDispatcher>());
+                })
+                .AddPublisher<DayStarted>("day-started-exchange"));
 
         return;
 

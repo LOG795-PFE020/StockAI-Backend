@@ -41,7 +41,7 @@ public sealed class StockController : ControllerBase
     }
 
     [HttpGet("{symbol}/{date}")]
-    public async Task<ActionResult<StockQuotes>> GetPrice(string symbol, DateTime date)
+    public async Task<ActionResult<StockPrice>> GetPrice(string symbol, DateTime date)
     {
         var query = new GetStockPrice(symbol, date);
 

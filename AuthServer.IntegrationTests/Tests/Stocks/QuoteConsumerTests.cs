@@ -17,29 +17,21 @@ public sealed class QuoteConsumerTests
     }
 
     [Fact]
-    public async Task QuoteConsumer_ShouldUpdateShare()
+    public async Task WithValidStockQuote_QuoteConsumer_ShouldIndexShareSuccessfully()
     {
         const string symbol = "AAPL";
         const decimal price = 100;
         
         DateTime date = DateTime.UtcNow;
 
-        Guid correlationId = Guid.NewGuid();
-
         var quote = new StockQuote
         {
             Symbol = symbol,
             Price = price,
             Date = date,
-            CorrelationId = correlationId.ToString()
         };
 
-        IMessagePublisher messagePublisher = _applicationFactoryFixture.WithMessagePublisher();
-
-        await messagePublisher.Publish(quote);
-
-        //Could use a notification instead
-        await Task.Delay(5_000);
+        await _applicationFactoryFixture.WithMessagePublished(quote);
 
         using var scope = _applicationFactoryFixture.Services.CreateScope();
 

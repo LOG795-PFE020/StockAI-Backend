@@ -1,8 +1,5 @@
 ﻿using MassTransit;
-using MassTransit.RabbitMqTransport.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using RabbitMQ.Client;
-using System.Net;
 
 namespace Infrastructure.RabbitMQ.Registration;
 

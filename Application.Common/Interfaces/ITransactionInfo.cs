@@ -2,5 +2,5 @@
 
 public interface ITransactionInfo
 {
-    public string? CorrelationId { get; set; }
+    public Guid? CorrelationId { get; set; }
 }
