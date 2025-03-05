@@ -20,7 +20,7 @@ public sealed class TransactionMiddleware
 
         if (context.Request.Headers.TryGetValue("CorrelationId", out var header))
         {
-            transactionInfo.CorrelationId = header;
+            transactionInfo.CorrelationId = Guid.Parse(header);
         }
 
         await _next(context);

@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Application.Commands.TimeMultiplier;
 using AuthServer.IntegrationTests.Infrastructure;
 using FluentAssertions;
+using Presentation.Api.Controllers;
 
 namespace AuthServer.IntegrationTests.Tests.Time;
 
@@ -28,5 +29,19 @@ public sealed class TimeControllerTest
         var response = await client.PatchAsJsonAsync("time", new ChangeClockTimeMultiplier(multiplier));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task WithValidAuth_GetTime_ShouldReturnCurrentUtcTime()
+    {
+        var testId = Guid.NewGuid();
+
+        var client = await _applicationFactoryFixture.WithAdminAuthAsync(testId);
+
+        var response = await client.GetFromJsonAsync<TimeController.CurrentTime>("time");
+
+        response.Should().NotBeNull();
+
+        response.Value.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromDays(5));
     }
 }

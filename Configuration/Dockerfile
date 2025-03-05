@@ -28,4 +28,5 @@ RUN dotnet publish "./Configuration.csproj" -c $BUILD_CONFIGURATION -o /app/publ
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+ENV ASPNETCORE_URLS=https://+:8081
 ENTRYPOINT ["dotnet", "Configuration.dll"]

@@ -9,8 +9,9 @@ public sealed class GetStockPriceHandler : IQueryHandler<GetStockPrice, decimal>
 {
     private readonly IMongoCollection<Share> _shares;
 
-    public GetStockPriceHandler(IMongoDatabase database)
+    public GetStockPriceHandler(IMongoClient client)
     {
+        var database = client.GetDatabase("Stocks");
         _shares = database.GetCollection<Share>("Share");
     }
 

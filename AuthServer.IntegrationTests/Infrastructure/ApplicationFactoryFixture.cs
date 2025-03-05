@@ -1,4 +1,5 @@
-﻿using Application.Common.Dtos;
+﻿using System.Collections.Concurrent;
+using Application.Common.Dtos;
 using AuthServer.IntegrationTests.Infrastructure.TestContainer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -18,23 +19,31 @@ using Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Presentation.Jobs;
 using Application.Common.Configurations;
+using Application.Common.Interfaces;
 using AuthServer.IntegrationTests.Tests.Rabbitmq.Consumers;
 using Microsoft.Extensions.Options;
 using Infrastructure.RabbitMQ.Registration;
 using AuthServer.IntegrationTests.Tests.Rabbitmq.Messages.Impl;
 using Domain.Time.DomainEvents;
 using AuthServer.IntegrationTests.Tests.Time.Consumers;
+using MassTransit;
 using Presentation.Consumers;
 using Presentation.Consumers.Messages;
 using Microsoft.AspNetCore.TestHost;
+using Event = Domain.Common.Seedwork.Abstract.Event;
 
 namespace AuthServer.IntegrationTests.Infrastructure;
 
 public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, IAsyncLifetime
 {
+    public IDictionary<Guid, TaskCompletionSource<Event>> TransactionCompletedNotifier => s_transactionCompletedNotifier;
+
+    private static readonly ConcurrentDictionary<Guid, TaskCompletionSource<Event>> s_transactionCompletedNotifier = new();
+
     private readonly Postgres _postgres = new();
     private readonly Rabbitmq _rabbitmq = new();
     private readonly Mongodb _mongodb = new();
+    private readonly Azurite _azurite = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -47,6 +56,7 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
                 ["ConnectionStrings:Postgres"] = _postgres.Container.GetConnectionString(),
                 ["ConnectionStrings:Rabbitmq"] = _rabbitmq.Container.GetConnectionString(),
                 ["ConnectionStrings:Mongodb"] = _mongodb.Container.GetConnectionString(),
+                ["ConnectionStrings:Blob"] = _azurite.Container.GetConnectionString(),
             };
             
             config.AddInMemoryCollection(integrationConfig!);
@@ -68,23 +78,41 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
                 _rabbitmq.Container.GetConnectionString(),
                 new MassTransitConfigurator()
                     .AddPublisher<TestMessage>("test-exchange")
-                    .AddConsumer<TestMessage, TestMessageConsumer>("test-exchange")
+                    .AddConsumer<TestMessage, ConsumerDecorator<TestMessage, TestMessageConsumer>>("test-exchange", _ => new(new()))
                     .AddPublisher<DayStarted>("day-started-exchange")
                     .AddConsumer<DayStarted, TestTimeMessageConsumer>("day-started-exchange")
                     .AddPublisher<StockQuote>("quote-exchange")
-                    .AddConsumer<StockQuote, QuoteConsumer>("quote-exchange", sp =>
+                    .AddConsumer<StockQuote, ConsumerDecorator<StockQuote, QuoteConsumer>>("quote-exchange", sp =>
                     {
                         var scope = sp.CreateScope();
-                        return new QuoteConsumer(scope.ServiceProvider.GetRequiredService<ICommandDispatcher>());
+                        return new (new QuoteConsumer(scope.ServiceProvider.GetRequiredService<ICommandDispatcher>()));
+                    })
+                    .AddPublisher<News>("news-exchange")
+                    .AddConsumer<News, ConsumerDecorator<News, NewsConsumer>> ("news-exchange", sp =>
+                    {
+                        var scope = sp.CreateScope();
+                        return new ( new(scope.ServiceProvider.GetRequiredService<ICommandDispatcher>()));
                     }));
         });
     }
 
-    public IMessagePublisher WithMessagePublisher()
+    public async Task<TMessage> WithMessagePublished<TMessage>(TMessage message, Guid correlationId = default) where TMessage : Event
     {
         using var scope = Services.CreateScope();
 
-        return scope.ServiceProvider.GetRequiredService<IMessagePublisher>();
+        var transactionInfo = scope.ServiceProvider.GetRequiredService<ITransactionInfo>();
+
+        transactionInfo.CorrelationId = correlationId = correlationId == default ? Guid.NewGuid() : correlationId;
+
+        var tcs = new TaskCompletionSource<Event>();
+
+        s_transactionCompletedNotifier.TryAdd(correlationId, tcs);
+
+        var messagePublisher = scope.ServiceProvider.GetRequiredService<IMessagePublisher>();
+
+        await messagePublisher.Publish(message);
+
+        return (TMessage)await tcs.Task;
     }
 
     public async Task<HttpClient> WithAdminAuthAsync(Guid testId = default)
@@ -181,6 +209,7 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
         await _postgres.InitializeAsync();
         await _rabbitmq.InitializeAsync();
         await _mongodb.InitializeAsync();
+        await _azurite.InitializeAsync();
     }
 
     public new async Task DisposeAsync()
@@ -190,6 +219,7 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
         await _postgres.DisposeAsync();
         await _rabbitmq.DisposeAsync();
         await _mongodb.DisposeAsync();
+        await _azurite.DisposeAsync();
     }
 
     public string? GetRoleFromJwt(string jwt)
@@ -201,5 +231,20 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
         var roleClaim = tokenS.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Role);
 
         return roleClaim?.Value;
+    }
+
+    private sealed class ConsumerDecorator<TConsumed, TDecorated>(TDecorated decorated) : IConsumer<TConsumed>
+        where TConsumed : Event
+        where TDecorated : class, IConsumer<TConsumed>
+    {
+        public async Task Consume(ConsumeContext<TConsumed> context)
+        {
+            await decorated.Consume(context);
+
+            if (context.CorrelationId is { } span && s_transactionCompletedNotifier.TryGetValue(span, out var value))
+            {
+                value.SetResult(context.Message);                s_transactionCompletedNotifier.TryRemove(span, out _);
+            }
+        }
     }
 }

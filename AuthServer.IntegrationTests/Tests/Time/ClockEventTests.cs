@@ -31,7 +31,7 @@ public sealed class ClockEventTests
 
         response.EnsureSuccessStatusCode();
 
-        var dayStartedEvent = await MessageSink.ListenFor<DayStarted>("*", new CancellationTokenSource(10_000).Token);
+        var dayStartedEvent = await MessageSink.ListenFor<DayStarted>(new CancellationTokenSource(10_000).Token);
 
         dayStartedEvent.Should().NotBeNull();
 

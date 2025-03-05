@@ -4,12 +4,12 @@ using Domain.Common.Monads;
 
 namespace Application.Commands.Time;
 
-public sealed class TickHandler : ICommandHandler<ClockTick>
+public sealed class ClockTickHandler : ICommandHandler<ClockTick>
 {
     private readonly IInMemoryStore<Domain.Time.Clock> _memoryStore;
     private readonly IMessagePublisher _messagePublisher;
 
-    public TickHandler(IInMemoryStore<Domain.Time.Clock> memoryStore, IMessagePublisher messagePublisher)
+    public ClockTickHandler(IInMemoryStore<Domain.Time.Clock> memoryStore, IMessagePublisher messagePublisher)
     {
         _memoryStore = memoryStore;
         _messagePublisher = messagePublisher;

@@ -8,8 +8,9 @@ public sealed class MongoSharesRepository : ISharesRepository
 {
     private readonly IMongoCollection<Share> _shares;
 
-    public MongoSharesRepository(IMongoDatabase database)
+    public MongoSharesRepository(IMongoClient client)
     {
+        var database = client.GetDatabase("Stocks");
         _shares = database.GetCollection<Share>("Shares");
     }
 

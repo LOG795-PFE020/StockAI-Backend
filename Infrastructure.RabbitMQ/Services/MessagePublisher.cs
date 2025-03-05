@@ -19,14 +19,12 @@ public sealed class MessagePublisher : IMessagePublisher
 
     public async Task Publish<TMessage>(TMessage message) where TMessage : Domain.Common.Seedwork.Abstract.Event
     {
-        message.CorrelationId ??= _transactionInfo.CorrelationId;
-
         Type messageConcreteType = message.GetType();
 
         var exchangeName = Registration.MassTransit.ExchangeNamesForMessageTypes[messageConcreteType];
 
         var endpoint = await _endpointProvider.GetSendEndpoint(new Uri($"{_connectionString}/{exchangeName}"));
 
-        await endpoint.Send(message, messageConcreteType);
+        await endpoint.Send(message, messageConcreteType, context => context.CorrelationId = _transactionInfo.CorrelationId ?? Guid.NewGuid());
     }
 }

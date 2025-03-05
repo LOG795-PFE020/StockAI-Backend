@@ -10,8 +10,9 @@ public sealed class GetAllSymbolsHandler : IQueryHandler<GetAllSymbols, List<str
 {
     private readonly IMongoCollection<Share> _shares;
 
-    public GetAllSymbolsHandler(IMongoDatabase database)
+    public GetAllSymbolsHandler(IMongoClient client)
     {
+        var database = client.GetDatabase("Stocks");
         _shares = database.GetCollection<Share>("Share");
     }
 

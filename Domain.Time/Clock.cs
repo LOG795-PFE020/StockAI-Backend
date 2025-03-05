@@ -5,6 +5,8 @@ namespace Domain.Time;
 
 public sealed class Clock : Aggregate<Clock>
 {
+    public DateTime DateTime => _syntheticDateTime;
+
     private DateTime _latestTickRealTime = DateTime.UtcNow;
 
     private DateTime _syntheticDateTime = DateTime.UtcNow;

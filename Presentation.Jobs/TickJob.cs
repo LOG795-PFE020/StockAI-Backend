@@ -35,7 +35,7 @@ public sealed class TickJob : BackgroundService
         {
             await Task.Delay(TickIntervalMs, stoppingToken);
 
-            transactionInfo.CorrelationId = Guid.NewGuid().ToString();
+            transactionInfo.CorrelationId = Guid.NewGuid();
 
             await commandDispatcher.DispatchAsync(new ClockTick(), stoppingToken);
         }
