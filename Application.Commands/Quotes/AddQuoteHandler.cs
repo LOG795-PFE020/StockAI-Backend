@@ -8,7 +8,7 @@ public sealed class AddQuoteHandler : ICommandHandler<AddQuote>
 {
     private readonly ISharesRepository _repository;
 
-    private static readonly Mutex Mutex = new();
+    private static readonly SemaphoreSlim SemaphoreSlim = new(1);
 
     public AddQuoteHandler(ISharesRepository repository)
     {
@@ -17,10 +17,10 @@ public sealed class AddQuoteHandler : ICommandHandler<AddQuote>
 
     public async Task<Result> Handle(AddQuote command, CancellationToken cancellation)
     {
+        await SemaphoreSlim.WaitAsync(cancellation);
+
         try
         {
-            Mutex.WaitOne();
-
             Domain.Stock.Share? share = await _repository.GetBySymbolAsync(command.Symbol);
 
             if (share is null)
@@ -38,7 +38,7 @@ public sealed class AddQuoteHandler : ICommandHandler<AddQuote>
         }
         finally
         {
-            Mutex.ReleaseMutex();
+            SemaphoreSlim.Release();
         }
     }
 }

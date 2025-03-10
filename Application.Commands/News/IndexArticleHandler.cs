@@ -11,7 +11,7 @@ public sealed class IndexArticleHandler : ICommandHandler<IndexArticle>
     private readonly IArticleRepository _articleRepository;
     private readonly IAzureBlobRepository _blobRepository;
 
-    private static readonly Mutex Mutex = new();
+    private static readonly SemaphoreSlim SemaphoreSlim = new(1);
 
     public IndexArticleHandler(IArticleRepository articleRepository, IAzureBlobRepository blobRepository)
     {
@@ -21,10 +21,10 @@ public sealed class IndexArticleHandler : ICommandHandler<IndexArticle>
 
     public async Task<Result> Handle(IndexArticle command, CancellationToken cancellation)
     {
+        await SemaphoreSlim.WaitAsync(cancellation);
+
         try
         {
-            Mutex.WaitOne();
-
             long articleCountForSymbol = await _articleRepository.GetNumberOfArticleForSymbol(command.SymbolId);
 
             string contentId = $"{command.SymbolId}-{articleCountForSymbol + 1}";
@@ -45,7 +45,7 @@ public sealed class IndexArticleHandler : ICommandHandler<IndexArticle>
         }
         finally
         {
-            Mutex.ReleaseMutex();
+            SemaphoreSlim.Release();
         }
     }
 }

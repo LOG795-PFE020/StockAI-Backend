@@ -9,6 +9,7 @@ using Domain.User;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using static Presentation.Api.Controllers.UserController;
 
 namespace AuthServer.IntegrationTests.Tests.Auth;
 
@@ -105,5 +106,17 @@ public class UserControllerTests
         var jwt = await responseMessage.Content.ReadAsStringAsync();
 
         _applicationFactoryFixture.GetRoleFromJwt(jwt).Should().Be(RoleConstants.Client);
+    }
+
+    [Fact]
+    public async Task ValidAuth_GetWalletId_ShouldReturnOk()
+    {
+        var client = await _applicationFactoryFixture.WithClientUserAuthAsync();
+
+        WalletId? response = await client.GetFromJsonAsync<WalletId>("user/wallet");
+
+        response.Should().NotBeNull();
+
+        response.Value.Should().HaveLength(Guid.NewGuid().ToString().Length);
     }
 }

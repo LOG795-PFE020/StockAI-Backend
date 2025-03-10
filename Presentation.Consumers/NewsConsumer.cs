@@ -20,6 +20,8 @@ public class NewsConsumer : IConsumer<News>
 
         var command = new IndexArticle(news.Title, news.Symbol, news.Content, news.PublishedAt, news.Opinion);
 
-        await _commandDispatcher.DispatchAsync(command);
+        var result = await _commandDispatcher.DispatchAsync(command);
+
+        result.ThrowIfException();
     }
 }

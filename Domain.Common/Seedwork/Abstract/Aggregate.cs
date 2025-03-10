@@ -1,6 +1,4 @@
-﻿using System.Collections;
-
-namespace Domain.Common.Seedwork.Abstract;
+﻿namespace Domain.Common.Seedwork.Abstract;
 
 public abstract class Aggregate<T> : Entity<T> where T : class
 {

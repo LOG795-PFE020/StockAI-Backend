@@ -3,7 +3,6 @@ using System.Text;
 using Application.Common.Interfaces;
 using Azure;
 using Azure.Storage.Blobs.Models;
-using Azure.Storage.Sas;
 
 namespace Infrastructure.Repositories;
 

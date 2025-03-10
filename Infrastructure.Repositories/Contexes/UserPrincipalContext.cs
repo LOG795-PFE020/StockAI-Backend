@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace Infrastructure.Repositories;
+namespace Infrastructure.Repositories.Contexes;
 
 public sealed class UserPrincipalContext : IdentityDbContext<UserPrincipal, IdentityRole, string>, IMigrateUserContext
 {
@@ -14,7 +14,10 @@ public sealed class UserPrincipalContext : IdentityDbContext<UserPrincipal, Iden
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<UserPrincipal>();
+        modelBuilder.Entity<UserPrincipal>(builder =>
+        {
+            builder.Property(nameof(UserPrincipal.WalletId));
+        });
     }
 
     public void Migrate()

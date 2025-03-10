@@ -1,7 +1,7 @@
 ﻿using System.Net.Http.Json;
 using Application.Queries.News;
 using AuthServer.IntegrationTests.Infrastructure;
-using AuthServer.IntegrationTests.Tests.News.Service;
+using AuthServer.IntegrationTests.Tests.News.Services;
 using FluentAssertions;
 
 namespace AuthServer.IntegrationTests.Tests.News;

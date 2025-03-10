@@ -7,7 +7,7 @@ public sealed class NewsViewModel
 {
     public int GeneralOpinion { get; init; }
 
-    public  double OpinionSkew { get; init; }
+    public double OpinionSkew { get; init; }
 
     public List<ArticleViewModel> ArticleViewModels { get; init; }
 

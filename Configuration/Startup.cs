@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
 using Application.Commands.Interfaces;
+using Application.Commands.NewUser;
 using Application.Commands.Seedwork;
 using Application.Common.Configurations;
 using Application.Common.Interfaces;
@@ -14,6 +15,7 @@ using Domain.User;
 using Infrastructure.RabbitMQ.Registration;
 using Infrastructure.RabbitMQ.Services;
 using Infrastructure.Repositories;
+using Infrastructure.Repositories.Contexes;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -151,6 +153,8 @@ public sealed class Startup
     private void RegisterInfrastructure(IServiceCollection collection)
     {
         collection.AddScoped<IMigrateUserContext, UserPrincipalContext>(provider => provider.GetRequiredService<UserPrincipalContext>());
+        collection.AddScoped<IMigrateWalletContext, WalletContext>(provider => provider.GetRequiredService<WalletContext>());
+
         collection.AddScoped<ITransactionInfo, TransactionInfo>();
         collection.AddScoped<IMessagePublisher, MessagePublisher>(provider =>
             new MessagePublisher(
@@ -159,11 +163,16 @@ public sealed class Startup
                 provider.GetRequiredService<ITransactionInfo>()));
 
         collection.AddDbContext<UserPrincipalContext>(RepositoryDbContextOptionConfiguration);
+        collection.AddDbContext<WalletContext>(RepositoryDbContextOptionConfiguration);
 
         collection.AddSingleton<IMongoClient>(_ => new MongoClient(_configuration.GetConnectionString("Mongodb")));
 
         collection.AddScoped<ISharesRepository, MongoSharesRepository>();
         collection.AddScoped<IArticleRepository, MongoArticleRepository>();
+
+        collection.AddScoped<IWalletQueryContext, WalletRepository>(provider => provider.GetRequiredService<WalletRepository>());
+        collection.AddScoped<IWalletRepository, WalletRepository>(provider => provider.GetRequiredService<WalletRepository>());
+        collection.AddScoped<WalletRepository>();
 
         collection.AddSingleton<IAzureBlobRepository, AzureBlobRepository>(_ 
             => new AzureBlobRepository(new BlobContainerClient(_configuration.GetConnectionString("Blob") ?? throw new InvalidOperationException("Blob connection string is not found"),
@@ -184,7 +193,13 @@ public sealed class Startup
                     var scope = sp.CreateScope();
                     return new(scope.ServiceProvider.GetRequiredService<ICommandDispatcher>());
                 })
-                .AddPublisher<DayStarted>("day-started-exchange"));
+                .AddPublisher<DayStarted>("day-started-exchange")
+                .AddPublisher<UserCreated>("user-created-exchange")
+                .AddConsumer<UserCreated, UserCreatedConsumer>("user-created-exchange", sp => 
+                {
+                    var scope = sp.CreateScope();
+                    return new(scope.ServiceProvider.GetRequiredService<ICommandDispatcher>());
+                }));
 
         return;
 

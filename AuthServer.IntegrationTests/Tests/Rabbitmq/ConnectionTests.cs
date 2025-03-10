@@ -1,5 +1,4 @@
 ﻿using AuthServer.IntegrationTests.Infrastructure;
-using AuthServer.IntegrationTests.Tests.Rabbitmq.Framework;
 using AuthServer.IntegrationTests.Tests.Rabbitmq.Messages.Impl;
 using FluentAssertions;
 

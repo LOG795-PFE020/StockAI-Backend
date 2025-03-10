@@ -1,14 +1,13 @@
-﻿using Application.Commands.Interfaces;
-using AuthServer.IntegrationTests.Infrastructure;
+﻿using AuthServer.IntegrationTests.Infrastructure;
 using Bogus;
 
-namespace AuthServer.IntegrationTests.Tests.News.Service;
+namespace AuthServer.IntegrationTests.Tests.News.Services;
 
 internal static class NewsPublisher
 {
     public const string Symbol = "AAPL";
 
-    public static async Task PublishAsync(ApplicationFactoryFixture applicationFactoryFixture, string content = "")
+    public static async Task<Presentation.Consumers.Messages.News> PublishAsync(ApplicationFactoryFixture applicationFactoryFixture, string content = "")
     {
         DateTime date = DateTime.UtcNow;
 
@@ -27,6 +26,6 @@ internal static class NewsPublisher
             Opinion = Random.Shared.Next(-1, 2)
         };
 
-        await applicationFactoryFixture.WithMessagePublished(news);
+        return await applicationFactoryFixture.WithMessagePublished(news);
     }
 }
