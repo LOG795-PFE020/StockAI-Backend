@@ -2,6 +2,8 @@
 
 public abstract class Entity<T> : IEquatable<Entity<T>> where T : class
 {
+    public string Id { get; init; }
+
     protected Entity(string id)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -11,8 +13,6 @@ public abstract class Entity<T> : IEquatable<Entity<T>> where T : class
 
         Id = id;
     }
-
-    public string Id { get; }
 
     public bool Equals(Entity<T>? other)
     {

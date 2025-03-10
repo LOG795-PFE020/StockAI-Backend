@@ -1,17 +1,25 @@
 services:
-  configuration:
+  monolith:
+    container_name: monolith
     image: ${DOCKER_REGISTRY-}configuration
     ports:
       - "8081:8081"
     build:
       context: .
       dockerfile: Configuration/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Lo 
     networks:
       - auth
     depends_on:
-      - db
+      - postgres
+      - mongo
+      - azurite
+      - rabbitmq
 
-  db:
+  postgres:
+    container_name: sql
     image: postgres:latest
     hostname: postgres
     environment:
@@ -20,6 +28,40 @@ services:
       POSTGRES_DB: postgres
     ports:
       - "5432:5432"
+    networks:
+      - auth
+
+  mongo:
+    container_name: mongodb
+    image: 'mongo:8.0.5'
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: mongo
+    ports:
+     - "27017:27017"
+    networks:
+      - auth
+ 
+  azurite:
+    container_name: azurite
+    image: 'mcr.microsoft.com/azure-storage/azurite:latest'
+    restart: always
+    ports:
+      - '10000:10000'
+      - '10001:10001'
+      - '10002:10002'
+    networks:
+      - auth
+
+  rabbitmq:
+    container_name: rabbitmq
+    hostname: rabbitmq
+    image: 'rabbitmq:3.13.7-management'
+    restart: always
+    ports:
+      - '5672:5672'
+      - '15672:15672'
     networks:
       - auth
 

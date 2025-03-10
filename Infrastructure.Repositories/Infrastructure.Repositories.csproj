@@ -7,7 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.23.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.7" />
+    <PackageReference Include="MongoDB.Driver" Version="3.2.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.4" />
     <PackageReference Include="Testcontainers" Version="3.9.0" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="3.9.0" />
@@ -16,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Application.Commands\Application.Commands.csproj" />
     <ProjectReference Include="..\Application.Queries\Application.Queries.csproj" />
+    <ProjectReference Include="..\Domain.News\Domain.News.csproj" />
     <ProjectReference Include="..\Domain.User\Domain.User.csproj" />
   </ItemGroup>
 

@@ -1,22 +1,33 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
 using Application.Commands.Interfaces;
+using Application.Commands.NewUser;
 using Application.Commands.Seedwork;
 using Application.Common.Configurations;
+using Application.Common.Interfaces;
 using Application.Queries.Interfaces;
 using Application.Queries.Seedwork;
+using Azure.Storage.Blobs;
 using Configuration.Dispatchers;
 using Configuration.Encryption;
+using Domain.Time.DomainEvents;
 using Domain.User;
+using Infrastructure.RabbitMQ.Registration;
+using Infrastructure.RabbitMQ.Services;
 using Infrastructure.Repositories;
+using Infrastructure.Repositories.Contexes;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using MongoDB.Driver;
 using Presentation.Api.Controllers;
 using Presentation.Api.Middlewares;
+using Presentation.Consumers;
+using Presentation.Consumers.Messages;
 using Presentation.Jobs;
 
 namespace Configuration;
@@ -62,6 +73,7 @@ public sealed class Startup
         app.UseAuthorization();
 
         app.UseMiddleware<ApiLoggingMiddleware>();
+        app.UseMiddleware<TransactionMiddleware>();
 
         app.UseEndpoints(endpoints =>
         {
@@ -78,6 +90,7 @@ public sealed class Startup
     private void RegisterPresentation(IServiceCollection collection)
     {
         collection.AddHostedService<AddDefaultDbRecords>();
+        collection.AddHostedService<TickJob>();
 
         collection.AddControllers()
             .AddJsonOptions(options =>
@@ -140,8 +153,53 @@ public sealed class Startup
     private void RegisterInfrastructure(IServiceCollection collection)
     {
         collection.AddScoped<IMigrateUserContext, UserPrincipalContext>(provider => provider.GetRequiredService<UserPrincipalContext>());
+        collection.AddScoped<IMigrateWalletContext, WalletContext>(provider => provider.GetRequiredService<WalletContext>());
+
+        collection.AddScoped<ITransactionInfo, TransactionInfo>();
+        collection.AddScoped<IMessagePublisher, MessagePublisher>(provider =>
+            new MessagePublisher(
+                _configuration.GetConnectionString("Rabbitmq") ?? throw new InvalidOperationException("Rabbitmq connection string is not found"), 
+                provider.GetRequiredService<ISendEndpointProvider>(),
+                provider.GetRequiredService<ITransactionInfo>()));
 
         collection.AddDbContext<UserPrincipalContext>(RepositoryDbContextOptionConfiguration);
+        collection.AddDbContext<WalletContext>(RepositoryDbContextOptionConfiguration);
+
+        collection.AddSingleton<IMongoClient>(_ => new MongoClient(_configuration.GetConnectionString("Mongodb")));
+
+        collection.AddScoped<ISharesRepository, MongoSharesRepository>();
+        collection.AddScoped<IArticleRepository, MongoArticleRepository>();
+
+        collection.AddScoped<IWalletQueryContext, WalletRepository>(provider => provider.GetRequiredService<WalletRepository>());
+        collection.AddScoped<IWalletRepository, WalletRepository>(provider => provider.GetRequiredService<WalletRepository>());
+        collection.AddScoped<WalletRepository>();
+
+        collection.AddSingleton<IAzureBlobRepository, AzureBlobRepository>(_ 
+            => new AzureBlobRepository(new BlobContainerClient(_configuration.GetConnectionString("Blob") ?? throw new InvalidOperationException("Blob connection string is not found"),
+                "article-contents")));
+
+        collection.AddSingleton(typeof(IInMemoryStore<>), typeof(InMemoryStore<>));
+
+        collection.RegisterMassTransit(
+            _configuration.GetConnectionString("Rabbitmq") ?? throw new InvalidOperationException("Rabbitmq connection string is not found"),
+            new MassTransitConfigurator()
+                .AddConsumer<StockQuote, QuoteConsumer>("quote-exchange",sp =>
+                {
+                    var scope = sp.CreateScope();
+                    return new(scope.ServiceProvider.GetRequiredService<ICommandDispatcher>());
+                })
+                .AddConsumer<News, NewsConsumer>("news-exchange", sp =>
+                {
+                    var scope = sp.CreateScope();
+                    return new(scope.ServiceProvider.GetRequiredService<ICommandDispatcher>());
+                })
+                .AddPublisher<DayStarted>("day-started-exchange")
+                .AddPublisher<UserCreated>("user-created-exchange")
+                .AddConsumer<UserCreated, UserCreatedConsumer>("user-created-exchange", sp => 
+                {
+                    var scope = sp.CreateScope();
+                    return new(scope.ServiceProvider.GetRequiredService<ICommandDispatcher>());
+                }));
 
         return;
 
@@ -157,8 +215,8 @@ public sealed class Startup
     private void RegisterConfiguration(IServiceCollection collection)
     {
         collection.AddSingleton<IRsaKeyStorage, RsaKeyStorage>(_ => RsaKeyStorage.Instance);
-        collection.AddSingleton<IQueryDispatcher, QueryDispatcher>();
-        collection.AddSingleton<ICommandDispatcher, CommandDispatcher>();
+        collection.AddScoped<IQueryDispatcher, QueryDispatcher>();
+        collection.AddScoped<ICommandDispatcher, CommandDispatcher>();
     }
 
     private void ScrutorScanForType(IServiceCollection services, Type type,

@@ -12,8 +12,6 @@ namespace Presentation.Jobs;
 
 public sealed class AddDefaultDbRecords : BackgroundService
 {
-    public static TaskCompletionSource<bool> IsReady { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
     private readonly IOptions<DefaultAdmin> _defaultAdminConfig;
     private readonly IOptions<DefaultClient> _defaultClientSetting;
     private readonly IServiceProvider _serviceProvider;
@@ -33,6 +31,7 @@ public sealed class AddDefaultDbRecords : BackgroundService
         using var scope = _serviceProvider.CreateScope();
 
         scope.ServiceProvider.GetRequiredService<IMigrateUserContext>().Migrate();
+        scope.ServiceProvider.GetRequiredService<IMigrateWalletContext>().Migrate();
 
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
@@ -44,7 +43,7 @@ public sealed class AddDefaultDbRecords : BackgroundService
 
         await AddDefaultClientAsync(stoppingToken, commandDispatcher);
 
-        IsReady.SetResult(true);
+        ServiceReady.Instance.Ready<AddDefaultDbRecords>();
     }
 
     private async Task AddRolesAsync(RoleManager<IdentityRole> roleManager)
