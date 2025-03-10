@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Application.Common\Application.Common.csproj" />
     <ProjectReference Include="..\Domain.Common\Domain.Common.csproj" />
+    <ProjectReference Include="..\Domain.News\Domain.News.csproj" />
     <ProjectReference Include="..\Domain.User\Domain.User.csproj" />
   </ItemGroup>
 
