@@ -3,7 +3,6 @@ using Application.Queries.Seedwork;
 using Domain.User;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Net.Http.Headers;
 
 namespace Presentation.Api.Controllers;
 

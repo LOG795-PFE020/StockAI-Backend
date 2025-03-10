@@ -1,7 +1,8 @@
-﻿using System.Security.Claims;
-using Application.Commands.Password;
+﻿using Application.Commands.Password;
 using Application.Commands.Seedwork;
 using Application.Common.Dtos;
+using Application.Queries.Seedwork;
+using Application.Queries.User;
 using Domain.User;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,21 +14,24 @@ namespace Presentation.Api.Controllers;
 [Route("user")]
 public sealed class UserController : ControllerBase
 {
-    private readonly ICommandDispatcher _commandDispatcher;
-
-    public UserController(ICommandDispatcher commandDispatcher)
-    {
-        _commandDispatcher = commandDispatcher;
-    }
-
     [HttpPatch("password")]
-    public async Task<ActionResult> ChangePassword([FromBody] PasswordChangeDto passwordChangeDto)
+    public async Task<ActionResult> ChangePassword([FromBody] PasswordChangeDto passwordChangeDto, ICommandDispatcher commandDispatcher)
     {
-        var changePassword = new ChangePassword(User.Claims.Single(claim => claim.Type.Equals(ClaimTypes.NameIdentifier)).Value, passwordChangeDto.OldPassword, passwordChangeDto.NewPassword);
+        var changePassword = new ChangePassword(User.GetUsername(), passwordChangeDto.OldPassword, passwordChangeDto.NewPassword);
 
-        var result = await _commandDispatcher.DispatchAsync(changePassword);
+        var result = await commandDispatcher.DispatchAsync(changePassword);
 
         if (result.IsSuccess()) return Ok();
+
+        return BadRequest(result.Exception!.Message);
+    }
+
+    [HttpGet("wallet")]
+    public async Task<ActionResult<WalletId>> Get(IQueryDispatcher queryDispatcher)
+    {
+        var result = await queryDispatcher.DispatchAsync<GetUserWalletId, string>(new GetUserWalletId(User.GetUsername()));
+
+        if (result.IsSuccess()) return Ok(new WalletId(result.Content!));
 
         return BadRequest(result.Exception!.Message);
     }
@@ -37,4 +41,6 @@ public sealed class UserController : ControllerBase
     {
         return Ok();
     }
+
+    public sealed record WalletId(string Value);
 }

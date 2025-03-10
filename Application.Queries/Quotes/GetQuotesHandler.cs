@@ -13,7 +13,7 @@ public sealed class GetQuotesHandler : IQueryHandler<GetQuotes, List<Quote>>
     public GetQuotesHandler(IMongoClient client)
     {
         var database = client.GetDatabase("Stocks");
-        _shares = database.GetCollection<Share>("Share");
+        _shares = database.GetCollection<Share>("Shares");
     }
 
     public async Task<Result<List<Quote>>> Handle(GetQuotes query, CancellationToken cancellation)

@@ -1,6 +1,7 @@
 ﻿using Application.Commands.Interfaces;
 using Application.Common.Interfaces;
 using AuthServer.IntegrationTests.Infrastructure;
+using AuthServer.IntegrationTests.Tests.News.Services;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,23 +26,14 @@ public sealed class NewsConsumerTests
 
         const string content = "Today we saw...";
 
-        var news = new Presentation.Consumers.Messages.News
-        {
-            Title = "Apple Inc.",
-            Symbol = symbol,
-            Content = content,
-            PublishedAt = date,
-            Opinion = 1
-        };
-
-        await _applicationFactoryFixture.WithMessagePublished(news);
+        await NewsPublisher.PublishAsync(_applicationFactoryFixture, content);
 
         using var scope = _applicationFactoryFixture.Services.CreateScope();
 
         IArticleRepository newsRepository = scope.ServiceProvider.GetRequiredService<IArticleRepository>();
         IAzureBlobRepository azureBlobRepository = scope.ServiceProvider.GetRequiredService<IAzureBlobRepository>();
 
-        var article = await newsRepository.GetBySymbolAsync(news.Symbol);
+        var article = await newsRepository.GetBySymbolAsync(symbol);
 
         article.Should().NotBeNull();
 

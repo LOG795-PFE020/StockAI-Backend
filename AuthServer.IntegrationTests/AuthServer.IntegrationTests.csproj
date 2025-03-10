@@ -36,7 +36,9 @@
 
   <ItemGroup>
     <Folder Include="Infrastructure\TestContainer\" />
+    <Folder Include="Tests\Portfolio\" />
     <Folder Include="Tests\Rabbitmq\Consumers\" />
+    <Folder Include="Tests\Stocks\Services\" />
   </ItemGroup>
 
 </Project>

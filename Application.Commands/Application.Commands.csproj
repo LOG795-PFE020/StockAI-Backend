@@ -17,12 +17,14 @@
     <ProjectReference Include="..\Application.Common\Application.Common.csproj" />
     <ProjectReference Include="..\Domain.Common\Domain.Common.csproj" />
     <ProjectReference Include="..\Domain.News\Domain.News.csproj" />
+    <ProjectReference Include="..\Domain.Portfolio\Domain.Portfolio.csproj" />
     <ProjectReference Include="..\Domain.Stock\Domain.Stock.csproj" />
     <ProjectReference Include="..\Domain.Time\Domain.Time.csproj" />
     <ProjectReference Include="..\Domain.User\Domain.User.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Wallet\" />
     <Folder Include="News\" />
     <Folder Include="Share\" />
     <Folder Include="NewUser\" />

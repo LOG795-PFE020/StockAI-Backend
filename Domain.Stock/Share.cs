@@ -23,17 +23,36 @@ namespace Domain.Stock
 
         public void AddQuote(DateTime day, decimal price)
         {
-            ImmutableInterlocked.Update(ref _quotes, list => list.Add(new Quote(day.Date, price)));
+            ImmutableInterlocked.Update(ref _quotes, list =>
+            {
+                list = list.Add(new Quote(day.Date, price));
+                return list.OrderBy(quote => quote.Day).ToImmutableList();
+            });
         }
 
         public Result<decimal> GetPrice(DateTime dateTime)
         {
-            var quote = Quotes.FirstOrDefault(q => q.Day == dateTime.Date);
-
-            if (quote is null)
+            if (Quotes.Count == 0)
             {
-                return Result.Failure<decimal>($"Quote not found for {Symbol} at {dateTime}");
+                return Result.Failure<decimal>("No quotes available");
             }
+
+            int currentPriceIndex;
+
+            var firstFuture = Quotes.FindIndex(q => q.Day > dateTime.Date);
+
+            // If there are no future quotes, the current price is the last one
+            if (firstFuture == -1)
+            {
+                currentPriceIndex = Quotes.Count - 1;
+            }
+            // If there are future quotes, the current price is the one before the first future quote
+            else
+            {
+                currentPriceIndex = firstFuture - 1;
+            }
+
+            var quote = Quotes[currentPriceIndex];
 
             return Result.Success(quote.Price);
         }

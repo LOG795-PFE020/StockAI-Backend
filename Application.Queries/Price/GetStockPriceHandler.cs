@@ -12,7 +12,7 @@ public sealed class GetStockPriceHandler : IQueryHandler<GetStockPrice, decimal>
     public GetStockPriceHandler(IMongoClient client)
     {
         var database = client.GetDatabase("Stocks");
-        _shares = database.GetCollection<Share>("Share");
+        _shares = database.GetCollection<Share>("Shares");
     }
 
     public async Task<Result<decimal>> Handle(GetStockPrice query, CancellationToken cancellation)

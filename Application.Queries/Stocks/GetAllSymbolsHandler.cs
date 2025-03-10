@@ -1,7 +1,6 @@
 ﻿using Application.Queries.Seedwork;
 using Domain.Common.Monads;
 using Domain.Stock;
-using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Application.Queries.Stocks;
@@ -13,7 +12,7 @@ public sealed class GetAllSymbolsHandler : IQueryHandler<GetAllSymbols, List<str
     public GetAllSymbolsHandler(IMongoClient client)
     {
         var database = client.GetDatabase("Stocks");
-        _shares = database.GetCollection<Share>("Share");
+        _shares = database.GetCollection<Share>("Shares");
     }
 
     public async Task<Result<List<string>>> Handle(GetAllSymbols query, CancellationToken cancellation)

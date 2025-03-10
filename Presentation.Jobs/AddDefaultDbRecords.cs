@@ -31,6 +31,7 @@ public sealed class AddDefaultDbRecords : BackgroundService
         using var scope = _serviceProvider.CreateScope();
 
         scope.ServiceProvider.GetRequiredService<IMigrateUserContext>().Migrate();
+        scope.ServiceProvider.GetRequiredService<IMigrateWalletContext>().Migrate();
 
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 

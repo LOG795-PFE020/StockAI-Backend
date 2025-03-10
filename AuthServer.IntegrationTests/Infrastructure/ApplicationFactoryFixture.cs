@@ -14,6 +14,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Application.Commands.AdminPassword;
 using Application.Commands.Interfaces;
+using Application.Commands.NewUser;
 using Application.Commands.Seedwork;
 using Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,8 +37,6 @@ namespace AuthServer.IntegrationTests.Infrastructure;
 
 public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, IAsyncLifetime
 {
-    public IDictionary<Guid, TaskCompletionSource<Event>> TransactionCompletedNotifier => s_transactionCompletedNotifier;
-
     private static readonly ConcurrentDictionary<Guid, TaskCompletionSource<Event>> s_transactionCompletedNotifier = new();
 
     private readonly Postgres _postgres = new();
@@ -92,6 +91,12 @@ public sealed class ApplicationFactoryFixture : WebApplicationFactory<Startup>, 
                     {
                         var scope = sp.CreateScope();
                         return new ( new(scope.ServiceProvider.GetRequiredService<ICommandDispatcher>()));
+                    })
+                    .AddPublisher<UserCreated>("user-created-exchange")
+                    .AddConsumer<UserCreated, ConsumerDecorator<UserCreated, UserCreatedConsumer>>("user-created-exchange", sp =>
+                    {
+                        var scope = sp.CreateScope();
+                        return new(new(scope.ServiceProvider.GetRequiredService<ICommandDispatcher>()));
                     }));
         });
     }

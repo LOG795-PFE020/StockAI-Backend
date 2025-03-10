@@ -1,8 +1,9 @@
 ﻿using Application.Commands.Interfaces;
 using AuthServer.IntegrationTests.Infrastructure;
+using AuthServer.IntegrationTests.Tests.Stocks.Services;
+using Bogus;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Presentation.Consumers.Messages;
 
 namespace AuthServer.IntegrationTests.Tests.Stocks;
 
@@ -19,19 +20,8 @@ public sealed class QuoteConsumerTests
     [Fact]
     public async Task WithValidStockQuote_QuoteConsumer_ShouldIndexShareSuccessfully()
     {
-        const string symbol = "AAPL";
-        const decimal price = 100;
-        
-        DateTime date = DateTime.UtcNow;
-
-        var quote = new StockQuote
-        {
-            Symbol = symbol,
-            Price = price,
-            Date = date,
-        };
-
-        await _applicationFactoryFixture.WithMessagePublished(quote);
+        var faker = new Faker();
+        var quote = await QuotePublisher.PublishQuote(_applicationFactoryFixture, faker.Company.CompanyName());
 
         using var scope = _applicationFactoryFixture.Services.CreateScope();
 
@@ -41,6 +31,6 @@ public sealed class QuoteConsumerTests
 
         share.Should().NotBeNull();
 
-        share.GetPrice(date.Date).Content.Should().Be(price);
+        share.GetPrice(quote.Date.Date).Content.Should().Be(100);
     }
 }
